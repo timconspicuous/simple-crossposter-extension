@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Options</title>
+</head>
+<body>
+    <h1>Simple Cross-Poster Settings</h1>
+    <form id="credentialsForm">
+        <p>The credentials are only saved locally using <a href="https://developer.chrome.com/docs/extensions/reference/api/storage">chrome.storage.local</a> and are only used to create a session via API.</p>
+        <p>Please consider using an <a href="https://bsky.app/profile/safety.bsky.app/post/3k7waehomo52m">App Password</a>.</p>
+        <p>OAuth hasn't been implemented yet in Bluesky, but is part of the <a href="https://bsky.social/about/blog/05-07-2024-product-roadmap">Roadmap</a>.</p>
+        <label for="username">Bluesky Username:</label>
+        <input type="text" id="username" name="username" required>
+        <br>
+        <label for="password">App Password:</label>
+        <input type="password" id="password" name="password" required>
+        <br>
+        <button type="submit">Save Credentials</button>
+    </form>
+
+    <script src="settings.bundle.js"></script>
+</body>
+</html> 
