@@ -1,10 +1,11 @@
-async function postToBluesky(text, imageURL = null, timestamp = new Date().toISOString()) {
+async function postToBluesky(text, imageURL = [], timestamp = new Date().toISOString()) {
     const { BskyAgent } = await import("@atproto/api");
+    const { RichText } = await import("@atproto/api");
 
     // Function to retrieve credentials as a promise
     function getCredentials() {
         return new Promise((resolve, reject) => {
-            chrome.storage.local.get(["username", "password"], (result) => {
+            chrome.storage.local.get(["identifier", "password"], (result) => {
                 if (chrome.runtime.lastError) {
                     return reject(chrome.runtime.lastError);
                 }
@@ -12,25 +13,8 @@ async function postToBluesky(text, imageURL = null, timestamp = new Date().toISO
             });
         });
     }
-
-    /*function getImageDimensions(url) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                resolve({ width: img.width, height: img.height });
-            };
-            img.onerror = (error) => {
-                reject(error);
-            };
-            img.src = url;
-        });
-    }*/
-
-    /*function toBlob(canvas, type = "image/jpeg", quality = 1) {
-        return new Promise((resolve) => canvas.toBlob(blob => resolve(blob)))
-    }*/
-      
-    async function imageToUint8Array(image, context) {
+    
+    async function imageToUint8Array(image, context, quality = 0.9) {
         context.canvas.width = image.width;
         context.canvas.height = image.height;
         context.drawImage(image, 0, 0);
@@ -41,75 +25,62 @@ async function postToBluesky(text, imageURL = null, timestamp = new Date().toISO
                     resolve(blob);
                 },
                 "image/jpeg",
-                1
+                quality
             );
         });
         return new Uint8Array(await blob.arrayBuffer());
     }
 
-    /*function imageToUint8Array(image, context) {
-        context.width = image.width;
-        context.height = image.height;
-        context.drawImage(image, 0, 0);
-
-        return new Uint8Array(context.getImageData(0, 0, image.width, image.height).data.buffer);
-    }*/
-
     const agent = new BskyAgent({
         service: "https://bsky.social"
     });
 
-    let username;
-    let password;
     try {
-        const credentials = await getCredentials();
-        username = credentials.username;
-        password = credentials.password;
-    } catch (error) {
+        await agent.login(await getCredentials());
+    } catch(error) {
         console.error("Error retrieving credentials: ", error);
     }
-        
-    const postJSON = {};
-    postJSON.text = text;
-    postJSON.createdAt = timestamp;
+    
+    const rt = new RichText({text: text});
+    await rt.detectFacets(agent);
+    const postRecord = {
+        $type: "app.bsky.feed.post",
+        text: rt.text,
+        facets: rt.facets,      
+        createdAt: timestamp
+    };
 
-    if (username && password) {
-        await agent.login({
-            identifier: username,
-            password: password
-        });
-    }
-
-    if (imageURL) {
-        const tempImage = new Image();
-        tempImage.src = imageURL;
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-
-        postJSON.embed = {$type: "app.bsky.embed.images"};
-        postJSON.embed.images = [{}];
-        /*getImageDimensions(imageURL)
-            .then(dimensions => {
-                postJSON.embed.images[0].aspectRatio = dimensions;
-            })
-            .catch(error => {
-                console.error("Error loading image:", error);
-            });*/
-        postJSON.embed.images[0].aspectRatio = {width: tempImage.width, height: tempImage.height};
-
-        try {
-            const { data } = await agent.uploadBlob(await imageToUint8Array(tempImage, context), {encoding: "image/jpeg"}); //include some encoding if necessary
-            postJSON.embed.images[0].image = data.blob;
-        } catch(error) {
-            console.error("Error uploading file: ", error);
+    if (imageURL.length > 0) {
+        postRecord.embed = {
+            $type: "app.bsky.embed.images",
+            images: []
         }
-        postJSON.embed.images[0].alt = "";
     }
-
-    console.log(postJSON);
-
+    const processImages = async () => {
+        for (const src of imageURL) {
+            const tempImage = new Image();
+            tempImage.src = src;
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            let data;
+            try {
+                const imageData = await imageToUint8Array(tempImage, context);
+                ({ data } = await agent.uploadBlob(imageData, { encoding: "image/jpeg" }));
+            } catch (error) {
+                console.error("Error uploading file: ", error);
+            }
+            postRecord.embed.images.push({
+                alt: "",
+                image: data.blob,
+                aspectRatio: {width: tempImage.width, height: tempImage.height}
+            });
+        }
+    };
+    
     try {
-        await agent.post(postJSON);
+        await processImages();
+        await agent.post(postRecord);
+        console.log("Post submitted successfully.");
     } catch(error) {
         console.error("Error submitting post: ", error);
     }
@@ -142,12 +113,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById("handle").innerText = response.handle;
                     document.getElementById("text").innerText = response.text;
                     document.getElementById("profile-picture").src = response.profilePicURL;
-
-                    if (response.imageURL) {
-                        document.getElementById("image").src = response.imageURL;
-                        document.getElementById("image").style.display = "block"; // Show the div if there is an image URL
-                    } else {
-                        document.getElementById("image").style.display = "none"; // Hide the div if there is no image URL
+                    if (response.imageURL.length > 0) {
+                        response.imageURL.forEach(src => {
+                            const img = document.createElement("img");
+                            img.src = src;
+                            document.getElementById("image-container").appendChild(img);
+                        });
                     }
                 } else {
                     document.getElementById("text").innerText = "Failed to retrieve text";
@@ -161,13 +132,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("icon2").addEventListener("click", function() {
         chrome.runtime.openOptionsPage();
     });
-    document.getElementById("postToBluesky").addEventListener("click", async () => {
+    document.getElementById("post-to-bluesky").addEventListener("click", async () => {
         try {
-            if (document.getElementById("image").src) {
-                postToBluesky(document.getElementById("text").innerText, document.getElementById("image").src); // This should be an array of images
-            } else {
-                postToBluesky(document.getElementById("text").innerText);
-            }
+            const srcs = [];
+            document.getElementById("image-container").querySelectorAll("img").forEach(img => {
+                srcs.push(img.src);
+            });
+            postToBluesky(document.getElementById("text").innerText, srcs);
         } catch (error) {
             console.error(error);
         }
