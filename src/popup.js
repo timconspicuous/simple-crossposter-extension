@@ -1,10 +1,11 @@
-async function postToBluesky(text) {
+async function postToBluesky(text, imageURL = [], timestamp = new Date().toISOString()) {
     const { BskyAgent } = await import("@atproto/api");
+    const { RichText } = await import("@atproto/api");
 
     // Function to retrieve credentials as a promise
     function getCredentials() {
         return new Promise((resolve, reject) => {
-            chrome.storage.local.get(["username", "password"], (result) => {
+            chrome.storage.local.get(["identifier", "password"], (result) => {
                 if (chrome.runtime.lastError) {
                     return reject(chrome.runtime.lastError);
                 }
@@ -12,34 +13,76 @@ async function postToBluesky(text) {
             });
         });
     }
-
-    function composePost(text, image = null, timestamp = null) {
-        const postJSON = {};
+    
+    async function imageToUint8Array(image, context, quality = 0.9) {
+        context.canvas.width = image.width;
+        context.canvas.height = image.height;
+        context.drawImage(image, 0, 0);
         
+        const blob = await new Promise((resolve) => {
+            context.canvas.toBlob(
+                (blob) => {
+                    resolve(blob);
+                },
+                "image/jpeg",
+                quality
+            );
+        });
+        return new Uint8Array(await blob.arrayBuffer());
     }
 
+    const agent = new BskyAgent({
+        service: "https://bsky.social"
+    });
+
     try {
-        const { username, password } = await getCredentials();
+        await agent.login(await getCredentials());
+    } catch(error) {
+        console.error("Error retrieving credentials: ", error);
+    }
+    
+    const rt = new RichText({text: text});
+    await rt.detectFacets(agent);
+    const postRecord = {
+        $type: "app.bsky.feed.post",
+        text: rt.text,
+        facets: rt.facets,      
+        createdAt: timestamp
+    };
 
-        const agent = new BskyAgent({
-            service: "https://bsky.social"
-        });
-
-        if (username && password) {
-            await agent.login({
-                identifier: username,
-                password: password
-            });
-            await agent.post({
-                text: "[🤖🔁]: " + text,
-                createdAt: new Date().toISOString()
-            });
-            console.log("Post successful!");
-        } else {
-            console.log("No credentials stored");
+    if (imageURL.length > 0) {
+        postRecord.embed = {
+            $type: "app.bsky.embed.images",
+            images: []
         }
-    } catch (error) {
-        console.error("Error retrieving credentials or posting:", error);
+    }
+    const processImages = async () => {
+        for (const src of imageURL) {
+            const tempImage = new Image();
+            tempImage.src = src;
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            let data;
+            try {
+                const imageData = await imageToUint8Array(tempImage, context);
+                ({ data } = await agent.uploadBlob(imageData, { encoding: "image/jpeg" }));
+            } catch (error) {
+                console.error("Error uploading file: ", error);
+            }
+            postRecord.embed.images.push({
+                alt: "",
+                image: data.blob,
+                aspectRatio: {width: tempImage.width, height: tempImage.height}
+            });
+        }
+    };
+    
+    try {
+        await processImages();
+        await agent.post(postRecord);
+        console.log("Post submitted successfully.");
+    } catch(error) {
+        console.error("Error submitting post: ", error);
     }
 }
 
@@ -70,12 +113,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById("handle").innerText = response.handle;
                     document.getElementById("text").innerText = response.text;
                     document.getElementById("profile-picture").src = response.profilePicURL;
-
-                    if (response.imageURL) {
-                        document.getElementById("image").src = response.imageURL;
-                        document.getElementById("image").style.display = "block"; // Show the div if there is an image URL
-                    } else {
-                        document.getElementById("image").style.display = "none"; // Hide the div if there is no image URL
+                    if (response.imageURL.length > 0) {
+                        response.imageURL.forEach(src => {
+                            const img = document.createElement("img");
+                            img.src = src;
+                            document.getElementById("image-container").appendChild(img);
+                        });
                     }
                 } else {
                     document.getElementById("text").innerText = "Failed to retrieve text";
@@ -89,12 +132,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById("icon2").addEventListener("click", function() {
         chrome.runtime.openOptionsPage();
     });
-    document.getElementById("postToBluesky").addEventListener("click", async () => {
+    document.getElementById("post-to-bluesky").addEventListener("click", async () => {
         try {
-            postToBluesky(document.getElementById("text").innerText);
+            const srcs = [];
+            document.getElementById("image-container").querySelectorAll("img").forEach(img => {
+                srcs.push(img.src);
+            });
+            postToBluesky(document.getElementById("text").innerText, srcs);
         } catch (error) {
             console.error(error);
-            //document.getElementById('status').innerText = 'Post failed.';
         }
     });
 });

@@ -1,11 +1,11 @@
-document.getElementById('credentialsForm').addEventListener('submit', async (event) => {
+document.getElementById("credentialsForm").addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const identifier = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
 
     // Store credentials in chrome.storage.local
-    chrome.storage.local.set({ username, password }, () => {
-        console.log('Credentials saved');
+    chrome.storage.local.set({ identifier, password }, () => {
+        console.log("Credentials saved");
     });
 });

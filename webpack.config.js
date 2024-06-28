@@ -14,7 +14,6 @@ module.exports = {
     },
     mode: "production",
     //devtool: false,
-    watch: true,
     plugins: [
         new CopyWebpackPlugin({
             patterns: [{from: "static"}]

@@ -75,12 +75,11 @@ body {
     margin-top: 10px;
 }
 
-.image {
-    margin-top: 10px;
-}
-
-.post-image {
+img {
     max-width: 100%;
+    height: auto;
+    margin: 5px;
+    box-sizing: border-box;
 }
 
 .timestamp {
