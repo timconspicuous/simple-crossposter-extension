@@ -27,6 +27,6 @@ Download the source code, install all dependencies with `npm install` and then r
 
 This is a very early version and I am not a trained developer. Please expect many bugs and unintended behavior.
 
-Most issues stem from the content-script not being properly injected. If the pop-up displays unintended content, **simply try reloading the page and re-opening the pop-up**. I will try to improve the content injection as we go along.
+Most issues stem from the content-script not being properly injected. If the pop-up displays unintended content, **simply try to reload the page and re-open the pop-up**. I will try to improve the content injection as we go along.
 
 Note that only the contents shown in the pop-up will be cross-posted, so please take a moment to verify that the intended content was fetched.
