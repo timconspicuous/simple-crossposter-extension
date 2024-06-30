@@ -94,6 +94,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set the height of the popup
     document.body.style.height = height + 'px';
 
+    const dateOptions = {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      };
+
     // Query the active tab
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
         let activeTab = tabs[0];
@@ -108,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (chrome.runtime.lastError) {
                     console.error(chrome.runtime.lastError);
                     document.getElementById("text").innerText = "Error: " + chrome.runtime.lastError.message;
-                } else if (response) { // you might want to check if the fields are not null
+                } else if (response) {
                     document.getElementById("name").innerText = response.name;
                     document.getElementById("handle").innerText = response.handle;
                     document.getElementById("text").innerText = response.text;
@@ -120,8 +128,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             document.getElementById("image-container").appendChild(img);
                         });
                     }
+                    console.log(response.timestamp);
+                    const timestamp = document.createElement("time");
+                    timestamp.setAttribute("datetime", response.timestamp);
+                    timestamp.textContent = new Date(response.timestamp).toLocaleString("en-US", dateOptions);
+                    document.getElementById("post").appendChild(timestamp);
                 } else {
-                    document.getElementById("text").innerText = "Failed to retrieve text";
+                    document.getElementById("text").innerText = "Failed to retrieve text, open any post to continue";
                 }
             });
         });

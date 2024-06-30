@@ -8,7 +8,7 @@ function fetchContent() {
       text: "",
       profilePicURL: "",
       imageURL: [],
-      timetamp: null
+      timestamp: ""
     };
   
     switch (true) {
@@ -34,11 +34,11 @@ function fetchContent() {
         document.querySelectorAll("[data-testid='tweetPhoto']").forEach(img => {
           targetDivs.imageURL.push(img.querySelector(".css-9pa8cd").src.split("&name")[0]);
         });
+        targetDivs.timestamp = document.querySelector("time").getAttribute("datetime");
         break;
-      // Add more cases as needed
       default:
-          //
-          break;
+        targetDivs = null;
+        break;
     }
     return targetDivs;
   }
