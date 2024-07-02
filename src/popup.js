@@ -26,7 +26,7 @@ function populatePopup(response) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    chrome.tabs.query({active: true, currentWindow: true}, async (tabs) => {
+    chrome.tabs.query({active: true, lastFocusedWindow: true}, async (tabs) => {
         if (tabs.length === 0) {
             console.log("No active tab found. This might be because the popup is being inspected.");
             document.getElementById("text").innerText = "Popup is being inspected. Please open it normally to use the extension.";

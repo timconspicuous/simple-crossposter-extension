@@ -21,7 +21,7 @@ function fetchContent() {
 
   switch (true) {
     case (/https:\/\/x\.com\/[^\/]+\/status\/\d+/).test(currentUrl):
-      const postContainer = document.querySelector(".css-175oi2r.r-16y2uox.r-1wbh5a2.r-1ny4l3l");
+      const postContainer = document.querySelector("[data-testid='tweet']");
       if (!postContainer) return targetDivs; // Exit if container not found
 
       const userNameElement = postContainer.querySelector("[data-testid='User-Name']");
