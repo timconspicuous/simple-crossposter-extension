@@ -2,9 +2,9 @@
 
 A Chrome extension to cross-post your tweets to Bluesky.
 
-If the current tab is a tweet, the extension will fetch the contents of the tweet and display them in the pop-up. A single click will then cross-post the contents to Bluesky.
+If the current tab is a post on X or Bluesky, the extension will fetch the contents of the tweet and display them in the pop-up. A single click will then cross-post the contents to Bluesky.
 
-(I'm planning to look at other APIs, most notably the new Threads API soon.)
+I'm planning to look at other APIs, most notably the new Threads API soon.
 
 ## How to use
 
