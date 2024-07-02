@@ -16,7 +16,7 @@ Click `Load unpacked` and select the unzipped `dist` folder.
 
 The extension should now be active. You will have to set your Bluesky credentials by opening the extension pop-up and clicking on the cogwheel emoji in the top right.
 
-Now, whenever your active tab is a tweet, you should be able to fetch its contents by opening the extension pop-up.
+Now, whenever your active tab is a post, you should be able to fetch its contents by opening the extension pop-up.
 
 ### Alternative installation
 
