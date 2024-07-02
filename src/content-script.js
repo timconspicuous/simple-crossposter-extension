@@ -1,52 +1,80 @@
-// Function to retrieve the text from the known <div>
+let targetDivs = {
+  name: "",
+  handle: "",
+  text: "",
+  profilePicURL: "",
+  imageURL: [],
+  timestamp: ""
+};
+
 function fetchContent() {
-    const url = window.location.href;
-  
-    let targetDivs = {
-      name: "",
-      handle: "",
-      text: "",
-      profilePicURL: "",
-      imageURL: [],
-      timestamp: ""
-    };
-  
-    switch (true) {
-      case url.includes("bsky.app"):
-        targetDivs.name = document.querySelector(".css-175oi2r.r-1loqt21.r-1otgn73.r-13awgt0").textContent;
-        targetDivs.handle = document.querySelector(".css-175oi2r.r-18u37iz.r-1559e4e").textContent
-        if (document.querySelector(".css-146c3p1.r-1xnzce8")) {
-          targetDivs.text = document.querySelector(".css-146c3p1.r-1xnzce8").textContent;
-        };
-        targetDivs.profilePicURL = document.querySelector(".css-9pa8cd").src;
-        let imgs = document.querySelector(".css-175oi2r.r-1m04atk.r-1pyaxff.r-95jzfe.r-13yce4e").querySelectorAll("img");
-        for (let i = 1; i < imgs.length; i++) {
-          targetDivs.imageURL.push(imgs[i].src.replace("thumbnail", "fullsize"));
-        } 
-        break;
-      case url.includes("x.com"):
-        targetDivs.name = document.querySelector("[data-testid='User-Name']").textContent.split("@")[0];
-        targetDivs.handle = "@" + document.querySelector("[data-testid='User-Name']").textContent.split("@")[1];
-        if (document.querySelector("[data-testid='tweetText']")) {
-          targetDivs.text = document.querySelector("[data-testid='tweetText']").textContent;
+  const currentUrl = window.location.href;
+
+  targetDivs = {
+    name: "",
+    handle: "",
+    text: "",
+    profilePicURL: "",
+    imageURL: [],
+    timestamp: ""
+  };
+
+  switch (true) {
+    case (/https:\/\/x\.com\/[^\/]+\/status\/\d+/).test(currentUrl):
+      const postContainer = document.querySelector(".css-175oi2r.r-16y2uox.r-1wbh5a2.r-1ny4l3l");
+      if (!postContainer) return targetDivs; // Exit if container not found
+
+      const userNameElement = postContainer.querySelector("[data-testid='User-Name']");
+      if (userNameElement) {
+        const nameParts = userNameElement.textContent.split("@");
+        targetDivs.name = nameParts[0].trim();
+        targetDivs.handle = nameParts[1] ? "@" + nameParts[1].trim() : "";
+      }
+
+      const tweetTextElement = postContainer.querySelector("[data-testid='tweetText']");
+      if (tweetTextElement) {
+        targetDivs.text = tweetTextElement.textContent;
+      }
+
+      const profilePicElement = postContainer.querySelector(".css-9pa8cd");
+      if (profilePicElement) {
+        targetDivs.profilePicURL = profilePicElement.src;
+      }
+
+      postContainer.querySelectorAll("[data-testid='tweetPhoto']").forEach(img => {
+        const imgElement = img.querySelector(".css-9pa8cd");
+        if (imgElement && imgElement.src) {
+          targetDivs.imageURL.push(imgElement.src.split("&name")[0]);
         }
-        targetDivs.profilePicURL = document.querySelector(".css-9pa8cd").src;
-        document.querySelectorAll("[data-testid='tweetPhoto']").forEach(img => {
-          targetDivs.imageURL.push(img.querySelector(".css-9pa8cd").src.split("&name")[0]);
-        });
-        targetDivs.timestamp = document.querySelector("time").getAttribute("datetime");
-        break;
-      default:
-        targetDivs = null;
-        break;
-    }
-    return targetDivs;
+      });
+
+      const timeElement = postContainer.querySelector("time");
+      if (timeElement) {
+        targetDivs.timestamp = timeElement.getAttribute("datetime");
+      }
+      break;
+    default:
+      break;
   }
+  return targetDivs;
+}
+let lastUrl = location.href; 
+new MutationObserver(() => {
+  const url = location.href;
+  if (url !== lastUrl) {
+    lastUrl = url;
+    setTimeout(fetchContent, 500);
+  }
+}).observe(document, {subtree: true, childList: true});
+
+// Initial pass with DOMContentLoaded
+document.addEventListener("DOMContentLoaded", fetchContent);
   
 // Listen for messages from the popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.message === "getContent") {
-      const content = fetchContent();
-      sendResponse(content);
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "getContent") {
+      fetchContent();
+      sendResponse(targetDivs);
+      return true;
   }
 });

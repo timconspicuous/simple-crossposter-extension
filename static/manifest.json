@@ -32,7 +32,7 @@
                 "https://*.bsky.app/*",
                 "https://*.x.com/*"
             ],
-            "js": ["content.bundle.js"]
+            "js": ["content-script.bundle.js"]
         }
     ],
     "host_permissions": [
