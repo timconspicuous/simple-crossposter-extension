@@ -8,7 +8,7 @@ If the current tab is a tweet, the extension will fetch the contents of the twee
 
 ## How to use
 
-Download the latest release and unzip it. The `dist` folder can be placed and renamed as to your preferences.
+Download the latest `dist.zip` release and unzip it. The `dist` folder can be placed and renamed as to your preferences.
 
 Go to chrome://extensions/ and toggle `Developer mode`.
 
