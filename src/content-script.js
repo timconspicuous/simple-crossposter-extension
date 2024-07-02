@@ -7,6 +7,20 @@ let targetDivs = {
   timestamp: ""
 };
 
+function getTextWithEmojis(element) {
+  let result = '';
+  for (const node of element.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      result += node.textContent;
+    } else if (node.nodeName === 'IMG' && node.alt) {
+      result += node.alt;
+    } else if (node.childNodes) {
+      result += getTextWithEmojis(node);
+    }
+  }
+  return result;
+}
+
 function fetchContent() {
   const currentUrl = window.location.href;
 
@@ -33,7 +47,7 @@ function fetchContent() {
 
       const tweetTextElement = postContainer.querySelector("[data-testid='tweetText']");
       if (tweetTextElement) {
-        targetDivs.text = tweetTextElement.textContent;
+        targetDivs.text = getTextWithEmojis(tweetTextElement);
       }
 
       const profilePicElement = postContainer.querySelector(".css-9pa8cd");
